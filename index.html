@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторія Кільцевої Дороги: Python Logic</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --accent-color: #2979FF;
+            --negative-color: #FF5722;
+            --result-color: #00E676;
+            --waste-color: #555;
+            --text-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 { margin-bottom: 5px; color: var(--accent-color); }
+        .subtitle { color: #888; margin-bottom: 20px; font-style: italic; }
+
+        .controls {
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            max-width: 900px;
+        }
+
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; font-weight: bold; }
+        
+        input {
+            background: #2c2c2c;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            width: 80px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+        input:focus { outline: none; border-color: var(--accent-color); }
+
+        .view-switch { display: flex; background: #2c2c2c; border-radius: 8px; padding: 4px; }
+        .view-btn {
+            background: transparent; border: none; color: #888; padding: 10px 20px;
+            cursor: pointer; border-radius: 6px; font-weight: bold; transition: all 0.3s;
+        }
+        .view-btn.active { background: var(--accent-color); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+        button.start-btn {
+            background: linear-gradient(135deg, #00C853, #009624);
+            color: white; border: none; padding: 12px 35px; border-radius: 6px;
+            cursor: pointer; font-size: 1.1em; font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 200, 83, 0.3); transition: transform 0.2s;
+        }
+        button.start-btn:hover { transform: scale(1.05); }
+
+        .vis-stage {
+            width: 100%; max-width: 950px; height: 400px;
+            background: #181818; border: 1px solid #333; border-radius: 12px;
+            position: relative; overflow: hidden; display: flex;
+            justify-content: center; align-items: center; margin-bottom: 20px;
+            padding: 10px; box-sizing: border-box;
+        }
+
+        /* Linear Elements */
+        .linear-track { position: relative; height: 150px; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .zero-line { position: absolute; top: 10%; bottom: 10%; width: 2px; background: #fff; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+        .zero-label { margin-top: -25px; color: #fff; font-weight: bold; background: #222; padding: 2px 5px; border-radius: 4px; }
+        
+        .distance-bar {
+            position: absolute; top: 50%; height: 40px; transform: translateY(-50%);
+            border-radius: 4px; opacity: 0.9; z-index: 2; display: flex; align-items: center;
+            box-sizing: border-box; color: #000; font-weight: bold; overflow: hidden; white-space: nowrap;
+        }
+        .bar-pos { left: 50%; background: var(--accent-color); justify-content: flex-end; padding-right: 10px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .bar-neg { right: 50%; background: var(--negative-color); justify-content: flex-start; padding-left: 10px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .cut-marker { position: absolute; top: -10px; bottom: -10px; width: 1px; background: rgba(255,255,255,0.5); z-index: 5; }
+        .discarded-segment { background: var(--waste-color) !important; opacity: 0.3 !important; border: 1px dashed #777; color: #aaa; }
+
+        /* Spiral Elements */
+        .spiral-wrapper { display: none; width: 100%; height: 100%; align-items: center; justify-content: center; gap: 30px; }
+        canvas { display: block; background: #1a1a1a; border-radius: 50%; border: 3px solid #333; }
+        
+        .spiral-stats-panel {
+            width: 260px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;
+            border: 1px solid #333; display: flex; flex-direction: column; justify-content: center;
+        }
+        .stat-item { margin-bottom: 20px; opacity: 1; transition: opacity 0.5s; }
+        .stat-label { display: block; font-size: 0.85em; color: #999; margin-bottom: 5px; text-transform: uppercase; }
+        .stat-value { font-family: 'Courier New', monospace; font-size: 1.6em; font-weight: bold; line-height: 1;}
+        .stat-laps { color: var(--waste-color); }
+        .stat-active { color: var(--accent-color); }
+        .stat-active.neg { color: var(--negative-color); }
+        .stat-result { color: var(--result-color); text-shadow: 0 0 10px rgba(0, 230, 118, 0.3); font-size: 2em;}
+
+        .explanation-box {
+            background: #263238; width: 100%; max-width: 950px; padding: 25px; border-radius: 10px;
+            border-left: 6px solid var(--accent-color); box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif; font-size: 1.1em; line-height: 1.6; min-height: 140px;
+        }
+        .step-title { color: var(--accent-color); font-weight: bold; text-transform: uppercase; font-size: 0.9em; margin-bottom: 10px; display: block; }
+        .math-code { font-family: 'Courier New', monospace; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: var(--result-color); font-weight: bold; }
+        .note { font-size: 0.9em; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin-top: 10px; border-left: 3px solid #FFB74D; color: #ddd; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🧪 Лабораторія: Python Modulo (%)</h1>
+    <div class="subtitle">Чому результат завжди додатній?</div>
+
+    <div class="controls">
+        <div class="input-group">
+            <label>Довжина кола</label>
+            <input type="number" id="roadLen" value="109" min="1">
+        </div>
+        <div class="input-group">
+            <label>Швидкість (v)</label>
+            <input type="number" id="v" value="-22" placeholder="-number">
+        </div>
+        <div class="input-group">
+            <label>Час (t)</label>
+            <input type="number" id="t" value="1">
+        </div>
+
+        <div class="view-switch">
+            <button class="view-btn active" onclick="setMode('linear')">📏 Лінійна</button>
+            <button class="view-btn" onclick="setMode('spiral')">🌀 Спіральна</button>
+        </div>
+
+        <button class="start-btn" onclick="runSimulation()">▶ ПУСК</button>
+    </div>
+
+    <div class="vis-stage" id="stage">
+        <div id="linearContainer" class="linear-track">
+            <div class="zero-line"><span class="zero-label">0</span></div>
+        </div>
+        <div id="spiralWrapper" class="spiral-wrapper">
+            <canvas id="spiralCanvas" width="380" height="380"></canvas>
+            <div id="spiralStats" class="spiral-stats-panel">
+                <div style="color: #666; font-style: italic; text-align: center;">Готово до запуску</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="explanation-box" id="explanation">
+        <span class="step-title">Теорія</span>
+        У Python оператор остачі <code>%</code> для від'ємних чисел працює інакше, ніж в звичайній арифметиці. Він завжди намагається дати <strong>додатній результат</strong>. Натисніть ПУСК, щоб побачити це.
+    </div>
+
+<script>
+    let currentMode = 'linear';
+    let animationId = null;
+
+    const linearCont = document.getElementById('linearContainer');
+    const spiralWrapper = document.getElementById('spiralWrapper');
+    const spiralStats = document.getElementById('spiralStats');
+    const canvas = document.getElementById('spiralCanvas');
+    const ctx = canvas.getContext('2d');
+    const explanation = document.getElementById('explanation');
+    const btns = document.querySelectorAll('.view-btn');
+
+    function setMode(mode) {
+        currentMode = mode;
+        btns.forEach(b => b.classList.remove('active'));
+        if(mode === 'linear') {
+            btns[0].classList.add('active');
+            linearCont.style.display = 'flex';
+            spiralWrapper.style.display = 'none';
+        } else {
+            btns[1].classList.add('active');
+            linearCont.style.display = 'none';
+            spiralWrapper.style.display = 'flex';
+        }
+        resetVis();
+    }
+
+    function resetVis() {
+        if(animationId) cancelAnimationFrame(animationId);
+        linearCont.innerHTML = '<div class="zero-line"><span class="zero-label">0</span></div>';
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        explanation.innerHTML = '<span class="step-title">Режим змінено</span>Натисніть ПУСК.';
+    }
+
+    function runSimulation() {
+        if(animationId) cancelAnimationFrame(animationId);
+        
+        const roadLen = parseInt(document.getElementById('roadLen').value) || 109;
+        const v = parseInt(document.getElementById('v').value) || 0;
+        const t = parseInt(document.getElementById('t').value) || 0;
+        const totalDist = v * t;
+
+        if (currentMode === 'linear') {
+            animateLinear(totalDist, roadLen);
+        } else {
+            animateSpiral(totalDist, roadLen);
+        }
+    }
+
+    // LINEAR MODE
+    function animateLinear(totalDist, roadLen) {
+        linearCont.innerHTML = '<div class="zero-line"><span class="zero-label">0</span></div>';
+        const absDist = Math.abs(totalDist);
+        // JS '%' operator behaves like C (returns negative), so we fix it to behave like Python for calc
+        const pythonResult = ((totalDist % roadLen) + roadLen) % roadLen;
+        
+        const halfWidth = linearCont.clientWidth / 2;
+        let pxPerKm = absDist > 0 ? (halfWidth / absDist) * 0.9 : 1;
+        pxPerKm = Math.min(pxPerKm, halfWidth / (roadLen * 1.5));
+        
+        updateText(1, totalDist, pythonResult, roadLen);
+
+        const mainBar = document.createElement('div');
+        mainBar.className = totalDist >= 0 ? 'distance-bar bar-pos' : 'distance-bar bar-neg';
+        mainBar.style.width = '0px';
+        mainBar.innerText = totalDist + ' км';
+        linearCont.appendChild(mainBar);
+
+        let w = 0;
+        const targetW = absDist * pxPerKm;
+        
+        const growInterval = setInterval(() => {
+            w += (targetW / 40);
+            if(w >= targetW) {
+                w = targetW;
+                clearInterval(growInterval);
+                mainBar.style.width = w + 'px';
+                setTimeout(() => linearStep2(totalDist, roadLen, pxPerKm, mainBar), 800);
+            } else {
+                mainBar.style.width = w + 'px';
+            }
+        }, 16);
+    }
+
+    function linearStep2(totalDist, roadLen, pxPerKm, mainBar) {
+        const absDist = Math.abs(totalDist);
+        const laps = Math.floor(absDist / roadLen);
+        updateText(2, totalDist, null, roadLen);
+        
+        const isPos = totalDist >= 0;
+        for(let i=1; i<=laps; i++) {
+            const marker = document.createElement('div');
+            marker.className = 'cut-marker';
+            const offset = i * roadLen * pxPerKm;
+            if (isPos) marker.style.left = `calc(50% + ${offset}px)`;
+            else marker.style.right = `calc(50% + ${offset}px)`;
+            linearCont.appendChild(marker);
+        }
+        setTimeout(() => linearStep3(totalDist, roadLen, pxPerKm, mainBar), 2000);
+    }
+
+    function linearStep3(totalDist, roadLen, pxPerKm, mainBar) {
+        const pythonResult = ((totalDist % roadLen) + roadLen) % roadLen;
+        updateText(3, totalDist, pythonResult, roadLen);
+        mainBar.style.display = 'none'; 
+        
+        const absDist = Math.abs(totalDist);
+        const laps = Math.floor(absDist / roadLen);
+        const isPos = totalDist >= 0;
+        
+        // Discarded segments
+        for(let i=0; i<laps; i++) {
+            const seg = document.createElement('div');
+            seg.className = isPos ? 'distance-bar discarded-segment bar-pos' : 'distance-bar discarded-segment bar-neg';
+            seg.style.width = (roadLen * pxPerKm) - 2 + 'px';
+            const offset = i * roadLen * pxPerKm;
+            if(isPos) seg.style.left = `calc(50% + ${offset}px)`;
+            else seg.style.right = `calc(50% + ${offset}px)`;
+            seg.innerText = "Коло " + (i+1);
+            linearCont.appendChild(seg);
+        }
+
+        // Remainder
+        // If negative, logically in Python we get the POSITIVE complement.
+        // Visually in Linear mode, it's hard to show "wrapping around", so we show the physical remainder
+        // and label it with the Python result.
+        
+        let physRem = absDist % roadLen;
+        if (physRem === 0 && absDist > 0) physRem = 0; 
+        
+        // To show "Python Result" in linear view for negative numbers is tricky.
+        // Let's show the physical bar (orange, left) but label it with the coordinate.
+        
+        if (physRem > 0.1 || (physRem === 0 && absDist === 0)) {
+            const remSeg = document.createElement('div');
+            remSeg.className = isPos ? 'distance-bar bar-pos' : 'distance-bar bar-neg';
+            remSeg.style.backgroundColor = 'var(--result-color)';
+            remSeg.style.width = (physRem * pxPerKm) + 'px';
+            
+            const offset = laps * roadLen * pxPerKm;
+            if(isPos) remSeg.style.left = `calc(50% + ${offset}px)`;
+            else remSeg.style.right = `calc(50% + ${offset}px)`;
+            
+            remSeg.innerText = pythonResult; // Show the coordinate!
+            remSeg.style.color = '#000';
+            linearCont.appendChild(remSeg);
+        }
+    }
+
+    // SPIRAL MODE
+    function animateSpiral(totalDist, roadLen) {
+        const pythonResult = ((totalDist % roadLen) + roadLen) % roadLen;
+        const absDist = Math.abs(totalDist);
+        let currentDist = 0;
+        const speed = Math.max(absDist / 200, 0.5); 
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = 120;
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Base Road
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI*2);
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 20; ctx.stroke();
+            // Markers
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Arial'; 
+            ctx.fillText('0', centerX + radius + 20, centerY + 5);
+            ctx.fillStyle = '#555'; ctx.font = '12px Arial';
+            if(totalDist < 0) ctx.fillText(`-${Math.abs(totalDist)%roadLen}`, centerX + radius + 20, centerY + 25);
+
+            if(Math.abs(currentDist) < absDist) {
+                currentDist += (totalDist >= 0 ? speed : -speed);
+                if(Math.abs(currentDist) > absDist) currentDist = totalDist;
+                updateText(1, totalDist, null, roadLen);
+            } else {
+                updateText(3, totalDist, pythonResult, roadLen);
+            }
+
+            const laps = Math.floor(Math.abs(currentDist) / roadLen);
+            
+            updateSpiralStats(currentDist, totalDist, laps, pythonResult, roadLen);
+
+            if(laps > 0) {
+                 ctx.beginPath();
+                 ctx.arc(centerX, centerY, radius, 0, Math.PI*2);
+                 ctx.strokeStyle = '#444'; ctx.lineWidth = 20; ctx.stroke();
+            }
+
+            const angleEnd = (currentDist / roadLen) * (Math.PI * 2);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, angleEnd, totalDist < 0);
+            
+            ctx.strokeStyle = (Math.abs(currentDist) >= absDist) ? '#00E676' : (totalDist >= 0 ? '#2979FF' : '#FF5722');
+            ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.stroke();
+
+            // Head
+            const headX = centerX + radius * Math.cos(angleEnd);
+            const headY = centerY + radius * Math.sin(angleEnd);
+            ctx.beginPath(); ctx.arc(headX, headY, 8, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+
+            if(Math.abs(currentDist) < absDist) {
+                animationId = requestAnimationFrame(draw);
+            }
+        }
+        draw();
+    }
+
+    function updateSpiralStats(currentDist, totalDist, laps, pythonResult, roadLen) {
+        const isMoving = Math.abs(currentDist) < Math.abs(totalDist);
+        let html = '';
+
+        if (laps > 0) {
+            html += `<div class="stat-item"><span class="stat-label">Повні кола (відкинуто)</span><span class="stat-value stat-laps">${laps}</span></div>`;
+        }
+
+        if (isMoving) {
+            const colorClass = totalDist < 0 ? 'neg' : '';
+            html += `<div class="stat-item"><span class="stat-label">Проїхано (фізично)</span><span class="stat-value stat-active ${colorClass}">${Math.round(currentDist)} км</span></div>`;
+        } else {
+            // FINISHED
+            html += `<div class="stat-item"><span class="stat-label">Результат Python (%)</span><span class="stat-value stat-result">${pythonResult}</span></div>`;
+            
+            if(totalDist < 0) {
+                 const physRem = Math.abs(totalDist) % roadLen;
+                 if(physRem !== 0) {
+                     html += `<div style="margin-top:15px; border-top:1px solid #444; padding-top:10px;">
+                        <span class="stat-label" style="color:#aaa">Геометричне пояснення:</span>
+                        <div style="font-size:0.9em; color:#ccc;">
+                            Ми відступили назад на <b>${Math.round(physRem)}</b>.<br>
+                            Це та сама точка, що й <b>${roadLen} - ${Math.round(physRem)} = ${pythonResult}</b>.
+                        </div>
+                     </div>`;
+                 }
+            }
+        }
+        spiralStats.innerHTML = html;
+    }
+
+    function updateText(step, totalDist, pythonResult, roadLen) {
+        const laps = Math.floor(Math.abs(totalDist) / roadLen);
+        let html = '';
+        
+        if (step === 1) {
+            html = `
+                <span class="step-title">Крок 1: Рух</span>
+                <span class="math-code">Шлях = ${totalDist} км</span>. 
+                ${totalDist < 0 ? 'Їдемо назад (проти годинникової стрілки).' : 'Їдемо вперед.'}
+            `;
+        } else if (step === 2) {
+            html = `
+                <span class="step-title">Крок 2: Відкидання кіл</span>
+                Довжина кола: ${roadLen}. Повних обертів: <span class="math-code">${laps}</span>. 
+                Python їх ігнорує, бо вони повертають нас в 0.
+            `;
+        } else if (step === 3) {
+            let extraNote = "";
+            if (totalDist < 0 && pythonResult !== 0) {
+                const physRem = Math.abs(totalDist) % roadLen;
+                extraNote = `
+                <div class="note">
+                    <strong>Як це рахує Python:</strong><br>
+                    Він бачить, що ми змістилися назад на ${physRem} км. 
+                    Але в системі координат кола (0..${roadLen-1}) немає від'ємних чисел.<br>
+                    Тому він автоматично "докручує" нас вперед: <br>
+                    <code>${pythonResult}</code> (це те саме, що ${roadLen} - ${physRem}).
+                </div>`;
+            }
+
+            html = `
+                <span class="step-title" style="color: var(--result-color)">Крок 3: Результат (Остача)</span>
+                Python (оператор %) відразу видає готовий додатній результат:
+                <br><br>
+                <span class="math-code">${totalDist} % ${roadLen} = ${pythonResult}</span>
+                ${extraNote}
+            `;
+        }
+        explanation.innerHTML = html;
+    }
+</script>
+</body>
+</html>
